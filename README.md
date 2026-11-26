@@ -20,18 +20,18 @@ La base dati H2 viene salvata nella cartella `./data`.
 - Login con email e password; "Password dimenticata?" ne genera e invia una nuova.
 - Estrazione senza auto-assegnazioni e senza destinatari duplicati.
 - Link privato con token individuale per mostrare solo il proprio destinatario.
-- Email tramite SMTP, se configurato.
+- Email tramite API Brevo, se configurata.
 
 ## Configurare email
-Imposta variabili d'ambiente prima dell'avvio:
-- `SMTP_HOST`
-- `SMTP_PORT` (es. 587)
-- `SMTP_USER`
-- `SMTP_PASSWORD`
-- `MAIL_FROM`
-- `APP_BASE_URL` (URL pubblico dell'app)
+Le email partono tramite l'API HTTPS di [Brevo](https://www.brevo.com) (gratis fino a 300 email al giorno): Railway blocca SMTP sotto il piano Pro.
+1. Crea un account Brevo e verifica l'indirizzo mittente in **Senders, Domains & Dedicated IPs → Senders**.
+2. Crea una chiave in **SMTP & API → API Keys**.
+3. Imposta le variabili d'ambiente:
+   - `BREVO_API_KEY`
+   - `MAIL_FROM` (l'indirizzo mittente verificato)
+   - `APP_BASE_URL` (URL pubblico dell'app)
 
-Se SMTP non è configurato, l'applicazione NON invia email: stampa i link privati nel log del server. Copiali e inviali individualmente ai partecipanti.
+Se Brevo non è configurato, l'applicazione NON invia email: stampa password e link privati nel log del server.
 
 ## Sicurezza prima della pubblicazione
 Questo è un MVP da provare in locale, non ancora pronto per essere esposto su Internet:
@@ -41,7 +41,7 @@ Questo è un MVP da provare in locale, non ancora pronto per essere esposto su I
 - Aggiungi rate limiting/CAPTCHA al form, gestione privacy/GDPR e policy di conservazione.
 - Proteggi l'area organizzatore con autenticazione vera; la chiave condivisa è solo una protezione minima.
 - I link di assegnazione sono segreti: non inoltrarli e non pubblicarli.
-- Configura SMTP e verifica il recapito prima dell'estrazione reale.
+- Configura Brevo e verifica il recapito prima dell'estrazione reale.
 
 ## API essenziali
 - `POST /api/register`

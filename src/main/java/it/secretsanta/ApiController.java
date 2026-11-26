@@ -148,7 +148,7 @@ class ApiController {
       try { mail.sendInvitation(p); }
       catch(Exception ex) { System.err.println("Invio email fallito per "+p.email+": "+ex.getMessage()); }
     }
-    return Map.of("message","Estrazione completata. Le email sono state inviate se SMTP è configurato; altrimenti i link sono nel log.");
+    return Map.of("message","Estrazione completata. Le email sono state inviate se Brevo è configurato; altrimenti i link sono nel log.");
   }
 
   @GetMapping("/my-assignment")
