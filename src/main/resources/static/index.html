@@ -108,7 +108,9 @@ $('admin-login').addEventListener('submit',async e=>{e.preventDefault();try{awai
 $('admin-logout').onclick=()=>location.reload();
 $('admin-close').onclick=()=>$('admin').close();
 // click sullo sfondo scuro: il target è il dialog stesso e il punto cade fuori dal riquadro
-$('admin').addEventListener('click',e=>{const r=$('admin').getBoundingClientRect();if(e.target===$('admin')&&(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom))$('admin').close()});
+// su mobile il click dello stesso tocco che apre il popup cade sullo sfondo: per 1 s dopo l'apertura il click fuori non chiude
+let adminOpenedAt=0;
+$('admin').addEventListener('click',e=>{const r=$('admin').getBoundingClientRect();if(Date.now()-adminOpenedAt>1000&&e.target===$('admin')&&(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom))$('admin').close()});
 // sequenza segreta per aprire l'area organizzatore: alto sx, basso sx, basso dx, alto dx (entro 5 secondi)
 const SECRET=['tl','bl','br','tr'];let secret=[],secretAt=0;
 const corner=e=>{const z=80;return (e.clientY<z?'t':e.clientY>innerHeight-z?'b':'')+(e.clientX<z?'l':e.clientX>innerWidth-z?'r':'')};
@@ -116,7 +118,7 @@ const corner=e=>{const z=80;return (e.clientY<z?'t':e.clientY>innerHeight-z?'b':
 const laugh=new Audio('media/Hohoho.mp3');let blTaps=0,blAt=0;
 function hohoho(){if(musicOn()){laugh.currentTime=0;laugh.play().catch(()=>{})}}
 addEventListener('pointerdown',e=>{if(corner(e)!=='bl'){blTaps=0;return}blTaps=Date.now()-blAt<1500?blTaps+1:1;blAt=Date.now();if(blTaps===3){blTaps=0;hohoho()}});
-addEventListener('pointerdown',e=>{if($('admin').open||adminMode())return;const c=corner(e);if(Date.now()-secretAt>5000)secret=[];secretAt=Date.now();secret.push(c);if(secret.some((s,i)=>s!==SECRET[i]))secret=c===SECRET[0]?[c]:[];if(secret.length===SECRET.length){secret=[];$('admin').showModal()}});
+addEventListener('pointerdown',e=>{if($('admin').open||adminMode())return;const c=corner(e);if(Date.now()-secretAt>5000)secret=[];secretAt=Date.now();secret.push(c);if(secret.some((s,i)=>s!==SECRET[i]))secret=c===SECRET[0]?[c]:[];if(secret.length===SECRET.length){secret=[];$('admin').showModal();adminOpenedAt=Date.now()}});
 $('draw').onclick=async()=>{if(!confirm('Confermi l’estrazione? Ogni iscritto riceverà la mail con la persona assegnata e le iscrizioni verranno chiuse.'))return;try{const d=await api('/draw',{method:'POST',headers:adminHeaders()});$('draw-msg').className='notice';$('draw-msg').textContent=d.message;refresh()}catch(e){$('draw-msg').className='notice error';$('draw-msg').textContent=e.message}};
 // localStorage può lanciare eccezioni (navigazione privata, dati bloccati): in quel caso si usano i default
 const store={get:k=>{try{return localStorage.getItem(k)}catch{return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch{}}};
