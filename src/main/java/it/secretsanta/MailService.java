@@ -13,14 +13,22 @@ class MailService {
   boolean configured() { return host != null && !host.isBlank() && from != null && !from.isBlank(); }
   void sendInvitation(Participant p) {
     String url = baseUrl.replaceAll("/$", "") + "/?token=" + p.accessToken;
+    send(p, "Il tuo Secret Santa 🎅", "Ciao " + p.name + "! La tua assegnazione è pronta. Apri questo link privato: " + url,
+      "Link privato per " + p.email + ": " + url);
+  }
+  void sendPassword(Participant p, String password) {
+    send(p, "La tua password Secret Santa 🎄", "Ciao " + p.name + "! Accedi a " + baseUrl + " con la tua email e questa password: " + password,
+      "Password per " + p.email + ": " + password);
+  }
+  private void send(Participant p, String subject, String text, String logLine) {
     if (!configured()) {
-      System.out.println("[SECRET SANTA] Link privato per " + p.email + ": " + url);
+      System.out.println("[SECRET SANTA] " + logLine);
       return;
     }
     SimpleMailMessage msg = new SimpleMailMessage();
     msg.setFrom(from); msg.setTo(p.email);
-    msg.setSubject("Il tuo Secret Santa 🎅");
-    msg.setText("Ciao " + p.name + "! La tua assegnazione è pronta. Apri questo link privato: " + url);
+    msg.setSubject(subject);
+    msg.setText(text);
     sender.send(msg);
   }
 }

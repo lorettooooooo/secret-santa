@@ -10,6 +10,9 @@ class Participant {
   @Column(length=2000) String ideas;
   @Column(length=2000) String avoid;
   @Column(nullable=false, unique=true) String accessToken = UUID.randomUUID().toString();
+  @Column(length=64) String passwordHash;
+  @Lob byte[] photo;
+  Long assignedId;
   String assignedName;
   @Column(length=2000) String assignedInterests;
   @Column(length=2000) String assignedIdeas;

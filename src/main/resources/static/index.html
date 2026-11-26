@@ -2,40 +2,79 @@
 <html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Secret Santa</title><style>
 :root{font-family:system-ui,Segoe UI,sans-serif;color:#20342c;background:#f3f5f1}*{box-sizing:border-box}
-body{margin:0;background:#173c32 url(media/christmas_bg.jpg) center/cover fixed}.wrap{position:relative;z-index:1;max-width:760px;margin:32px auto;padding:16px}
+body{margin:0;background:#173c32}.wrap{position:relative;z-index:1;max-width:760px;margin:32px auto;padding:16px}
+/* parallax: sfondo e neve scorrono a una frazione della pagina, altezza e spostamento impostati da JS */
+.scene{position:fixed;top:0;left:0;width:100%;height:100vh;background:url(media/christmas_bg.jpg) center top/cover;pointer-events:none;will-change:transform}
 /* screen blend: il nero del video sparisce, restano solo i fiocchi */
-.snow{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;mix-blend-mode:screen;pointer-events:none}
-@media (prefers-reduced-motion:reduce){.snow{display:none}}.hero{background:#173c32;color:white;padding:28px;border-radius:18px}
-h1{margin:4px 0;color:#f0d9a2} .card{background:white;padding:22px;border-radius:16px;margin:16px 0;box-shadow:0 3px 16px #173c3210}
+.snow{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;mix-blend-mode:screen}
+@media (prefers-reduced-motion:reduce){.snow{display:none}}
+.hero{background:#173c32;color:white;padding:28px;border-radius:18px}
+h1{margin:4px 0;color:#f0d9a2} .card{background:#ffffffc7;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:22px;border-radius:16px;margin:16px 0;box-shadow:0 3px 16px #173c3210}
 label{display:block;font-weight:650;margin:12px 0 5px}input,textarea{width:100%;padding:12px;border:1px solid #cbd5ce;border-radius:9px;font:inherit}
 textarea{min-height:76px;resize:vertical}button{border:0;border-radius:9px;padding:12px 18px;background:#1d5946;color:white;font-weight:700;cursor:pointer;margin-top:14px}
 button.secondary{background:#e8eee9;color:#20342c}.muted{color:#65766c;font-size:.92rem}.hidden{display:none}.result{font-size:1.5rem;color:#176b4b;font-weight:800}
 .tabs{display:flex;gap:8px;flex-wrap:wrap}.tabs button{margin:0}.tabs button.active{background:#d5e4d9;color:#173c32}
+.avatar{display:block;width:160px;height:160px;object-fit:cover;border-radius:50%;margin:8px 0 12px;box-shadow:0 3px 12px #173c3240}
+dialog.card{border:0;width:min(640px,calc(100% - 32px));margin:auto}dialog::backdrop{background:#0b1f1999}
 .notice{padding:12px;border-radius:9px;background:#fff4d9;margin-top:12px}.error{background:#ffe7e5;color:#922}.row{display:flex;justify-content:space-between;gap:12px;align-items:center}
-</style></head><body><video class="snow" src="media/snow.mp4" autoplay muted loop playsinline aria-hidden="true"></video><main class="wrap">
+</style></head><body><div id="scene" class="scene" aria-hidden="true"><video class="snow" src="media/snow.mp4" autoplay muted loop playsinline></video></div><main class="wrap">
 <header class="hero"><div>🎄 EDIZIONE 2026</div><h1>🎅 Secret Santa</h1><p>Un regalo, una sorpresa, un pizzico di magia.</p><div id="count">Partecipanti: …</div></header>
-<section id="private" class="card hidden"><h2>La tua assegnazione 🎁</h2><p>Il tuo destinatario è:</p><div id="recipient" class="result"></div><div id="wishlist"></div></section>
+<section id="private" class="hidden">
+<div class="card"><h2>Il tuo profilo</h2><img id="my-photo" class="avatar" alt="Il tuo selfie" onerror="this.classList.add('hidden')">
+<label for="new-photo">Cambia immagine</label><input id="new-photo" type="file" accept="image/*" capture="user"><div id="photo-msg" aria-live="polite"></div></div>
+<div class="card"><h2>La tua assegnazione 🎁</h2><img id="recipient-photo" class="avatar hidden" alt="" onerror="this.classList.add('hidden')"><div id="recipient" class="result"></div><div id="wishlist"></div></div>
+</section>
 <section id="public">
+<div class="card"><h2>Login</h2><p class="muted">Già iscritto? Accedi al tuo profilo.</p>
+<form id="login">
+<label>Email</label><input name="email" type="email" required maxlength="200" autocomplete="username">
+<label>Password</label><input name="password" type="password" required maxlength="100" autocomplete="current-password">
+<div class="tabs"><button>Accedi</button><button type="button" class="secondary" id="forgot">Password dimenticata?</button></div></form>
+<div id="login-msg" aria-live="polite"></div></div>
 <div class="card"><h2>Partecipa</h2><p class="muted">Inserisci i tuoi dati e qualche indicazione per aiutare il tuo Secret Santa.</p>
 <form id="signup">
 <label>Nome e cognome</label><input name="name" required maxlength="100">
 <label>Email</label><input name="email" type="email" required maxlength="200">
+<label for="photo">Selfie</label><input id="photo" type="file" accept="image/*" capture="user" required>
 <label>Interessi e hobby</label><textarea name="interests" maxlength="2000" placeholder="Libri, cucina, videogiochi…"></textarea>
 <label>Idee regalo</label><textarea name="ideas" maxlength="2000" placeholder="Cosa ti piacerebbe ricevere?"></textarea>
 <label>Cosa preferisci evitare?</label><textarea name="avoid" maxlength="2000"></textarea>
 <button>Conferma iscrizione</button></form><div id="signup-msg" aria-live="polite"></div></div>
-<div class="card"><h2>Area organizzatore</h2><p class="muted">Solo l'organizzatore può vedere l'elenco e avviare l'estrazione. Conserva la chiave amministratore.</p>
-<label>Chiave amministratore</label><input id="admin-key" type="password" autocomplete="current-password">
-<div class="tabs"><button class="secondary" id="load">Carica iscritti</button><button id="draw">Esegui estrazione</button></div>
-<div id="admin-msg" aria-live="polite"></div><div id="participants"></div></div></div>
 </section></main>
+<dialog id="admin" class="card"><h2>Area organizzatore</h2>
+<form id="admin-login">
+<label>Email</label><input id="admin-email" type="email" required maxlength="200" autocomplete="username">
+<label>Password</label><input id="admin-key" type="password" required autocomplete="current-password">
+<div class="tabs"><button>Accedi</button><button type="button" class="secondary" id="admin-close">Chiudi</button></div></form>
+<div id="admin-panel" class="tabs hidden"><button class="secondary" id="load">Carica iscritti</button><button id="draw">Esegui estrazione</button></div>
+<div id="admin-msg" aria-live="polite"></div><div id="participants"></div></dialog>
 <script>
 const $=id=>document.getElementById(id);
 async function api(path,opts={}){const r=await fetch('/api'+path,{...opts,headers:{'Content-Type':'application/json',...(opts.headers||{})}});let data={};try{data=await r.json()}catch{}if(!r.ok)throw Error(data.message||'Errore nella richiesta');return data}
 async function refresh(){try{const s=await api('/status');$('count').textContent=`Partecipanti iscritti: ${s.count}/20 · ${s.drawn?'Estrazione effettuata':'Iscrizioni aperte'}`}catch{$('count').textContent='Servizio non disponibile'}}
-$('signup').addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.target),body=Object.fromEntries(f.entries());try{const d=await api('/register',{method:'POST',body:JSON.stringify(body)});$('signup-msg').className='notice';$('signup-msg').textContent=d.message;e.target.reset();refresh()}catch(err){$('signup-msg').className='notice error';$('signup-msg').textContent=err.message}});
-$('load').onclick=async()=>{try{const people=await api('/participants',{headers:{'X-Admin-Key':$('admin-key').value}});$('participants').innerHTML='<h3>Iscritti ('+people.length+')</h3>'+people.map(p=>`<div class="notice"><b>${esc(p.name)}</b><br>${esc(p.email)}<br><small>Interessi: ${esc(p.interests||'—')} · Idee: ${esc(p.ideas||'—')}</small></div>`).join('');$('admin-msg').textContent='Elenco aggiornato'}catch(e){$('admin-msg').textContent=e.message}};
-$('draw').onclick=async()=>{if(!confirm('Confermi l’estrazione? Dopo il sorteggio non sarà possibile iscriversi.'))return;try{const d=await api('/draw',{method:'POST',headers:{'X-Admin-Key':$('admin-key').value}});$('admin-msg').textContent=d.message;refresh()}catch(e){$('admin-msg').textContent=e.message}};
+// ridimensiona il selfie a max 640px in JPEG, così la richiesta resta leggera
+async function selfie(file){const img=await createImageBitmap(file),s=Math.min(1,640/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.8)}
+$('signup').addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.target),body=Object.fromEntries(f.entries());try{body.photo=await selfie($('photo').files[0]);const d=await api('/register',{method:'POST',body:JSON.stringify(body)});$('signup-msg').className='notice';$('signup-msg').textContent=d.message;e.target.reset();refresh()}catch(err){$('signup-msg').className='notice error';$('signup-msg').textContent=err.message}});
+const adminHeaders=()=>({'X-Admin-Email':$('admin-email').value,'X-Admin-Key':$('admin-key').value});
+async function loadParticipants(){try{const people=await api('/participants',{headers:adminHeaders()});$('participants').innerHTML='<h3>Iscritti ('+people.length+')</h3>'+people.map(p=>`<div class="notice"><b>${esc(p.name)}</b><br>${esc(p.email)}<br><small>Interessi: ${esc(p.interests||'—')} · Idee: ${esc(p.ideas||'—')}</small></div>`).join('');$('admin-msg').textContent='Elenco aggiornato';return true}catch(e){$('admin-msg').textContent=e.message;return false}}
+$('load').onclick=loadParticipants;
+// l'accesso è verificato caricando gli iscritti: se le credenziali sono giuste compaiono i comandi
+$('admin-login').addEventListener('submit',async e=>{e.preventDefault();if(await loadParticipants()){$('admin-login').classList.add('hidden');$('admin-panel').classList.remove('hidden')}});
+$('admin-close').onclick=()=>$('admin').close();
+// sequenza segreta per aprire l'area organizzatore: alto sx, basso sx, basso dx, alto dx (entro 5 secondi)
+const SECRET=['tl','bl','br','tr'];let secret=[],secretAt=0;
+addEventListener('pointerdown',e=>{if($('admin').open)return;const z=80,c=(e.clientY<z?'t':e.clientY>innerHeight-z?'b':'')+(e.clientX<z?'l':e.clientX>innerWidth-z?'r':'');if(Date.now()-secretAt>5000)secret=[];secretAt=Date.now();secret.push(c);if(secret.some((s,i)=>s!==SECRET[i]))secret=c===SECRET[0]?[c]:[];if(secret.length===SECRET.length){secret=[];$('admin').showModal()}});
+$('draw').onclick=async()=>{if(!confirm('Confermi l’estrazione? Dopo il sorteggio non sarà possibile iscriversi.'))return;try{const d=await api('/draw',{method:'POST',headers:adminHeaders()});$('admin-msg').textContent=d.message;refresh()}catch(e){$('admin-msg').textContent=e.message}};
+function parallax(){const k=matchMedia('(prefers-reduced-motion:reduce)').matches?0:.3,max=document.documentElement.scrollHeight-innerHeight;$('scene').style.height=innerHeight+max*k+'px';$('scene').style.transform=`translateY(${-scrollY*k}px)`}
+addEventListener('scroll',parallax,{passive:true});addEventListener('resize',parallax);parallax();
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-(async()=>{const token=new URLSearchParams(location.search).get('token');if(token){$('public').classList.add('hidden');$('private').classList.remove('hidden');try{const a=await api('/my-assignment?token='+encodeURIComponent(token));$('recipient').textContent=a.recipient;$('wishlist').innerHTML='<h3>Wishlist</h3><p><b>Interessi:</b> '+esc(a.interests||'Non indicati')+'</p><p><b>Idee:</b> '+esc(a.ideas||'Non indicate')+'</p><p><b>Da evitare:</b> '+esc(a.avoid||'Non indicato')+'</p>'}catch(e){$('recipient').textContent=e.message}}await refresh()})();
+let myToken;
+// t= evita che il browser mostri la foto vecchia dopo una modifica
+const photoUrl=path=>'/api/'+path+'?token='+encodeURIComponent(myToken)+'&t='+Date.now();
+function showPhoto(id,path){$(id).classList.remove('hidden');$(id).src=photoUrl(path)}
+async function showPrivate(token){myToken=token;$('public').classList.add('hidden');$('private').classList.remove('hidden');showPhoto('my-photo','my-photo');try{const a=await api('/my-assignment?token='+encodeURIComponent(token));$('recipient-photo').alt='Foto di '+a.recipient;showPhoto('recipient-photo','recipient-photo');$('recipient').textContent=a.recipient;$('wishlist').innerHTML='<h3>Wishlist</h3><p><b>Interessi:</b> '+esc(a.interests||'Non indicati')+'</p><p><b>Idee:</b> '+esc(a.ideas||'Non indicate')+'</p><p><b>Da evitare:</b> '+esc(a.avoid||'Non indicato')+'</p>'}catch(e){$('recipient').textContent=e.message}}
+$('new-photo').onchange=async e=>{if(!e.target.files[0])return;try{const d=await api('/my-photo?token='+encodeURIComponent(myToken),{method:'PUT',body:JSON.stringify({photo:await selfie(e.target.files[0])})});showPhoto('my-photo','my-photo');$('photo-msg').className='notice';$('photo-msg').textContent=d.message}catch(err){$('photo-msg').className='notice error';$('photo-msg').textContent=err.message}e.target.value=''};
+$('login').addEventListener('submit',async e=>{e.preventDefault();const body=Object.fromEntries(new FormData(e.target).entries());try{const d=await api('/login',{method:'POST',body:JSON.stringify(body)});showPrivate(d.token)}catch(err){$('login-msg').className='notice error';$('login-msg').textContent=err.message}});
+$('forgot').onclick=async()=>{const email=$('login').email;if(!email.reportValidity())return;try{const d=await api('/forgot-password',{method:'POST',body:JSON.stringify({email:email.value})});$('login-msg').className='notice';$('login-msg').textContent=d.message}catch(err){$('login-msg').className='notice error';$('login-msg').textContent=err.message}};
+(async()=>{const token=new URLSearchParams(location.search).get('token');if(token)await showPrivate(token);await refresh()})();
 </script></body></html>

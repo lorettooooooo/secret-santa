@@ -9,13 +9,15 @@ Applicazione web per 10–20 partecipanti, realizzata con Java 17, Spring Boot, 
    mvn spring-boot:run
    ```
 3. Apri http://localhost:8080
-4. Chiave amministratore predefinita: `change-me-now`.
+4. Area organizzatore: tocca in sequenza gli angoli alto sx, basso sx, basso dx, alto dx (entro 5 secondi). Credenziali predefinite: `admin@secretsanta.local` / `change-me-now` (variabili `ADMIN_EMAIL` e `ADMIN_KEY`).
 
 La base dati H2 viene salvata nella cartella `./data`.
 
 ## Funzioni
-- Iscrizione con nome, email e preferenze regalo.
+- Iscrizione con nome, email e selfie obbligatori, preferenze regalo facoltative.
 - Controllo email duplicata e limite massimo di 20 partecipanti.
+- Password generata all'iscrizione (es. `Snowball103#`) e inviata via email; a DB solo l'hash SHA-256.
+- Login con email e password; "Password dimenticata?" ne genera e invia una nuova.
 - Estrazione senza auto-assegnazioni e senza destinatari duplicati.
 - Link privato con token individuale per mostrare solo il proprio destinatario.
 - Email tramite SMTP, se configurato.
@@ -33,7 +35,7 @@ Se SMTP non è configurato, l'applicazione NON invia email: stampa i link privat
 
 ## Sicurezza prima della pubblicazione
 Questo è un MVP da provare in locale, non ancora pronto per essere esposto su Internet:
-- Cambia `ADMIN_KEY` con un valore lungo e casuale.
+- Cambia `ADMIN_EMAIL` e imposta `ADMIN_KEY` a un valore lungo e casuale.
 - Configura HTTPS e un dominio.
 - Usa un database gestito con backup.
 - Aggiungi rate limiting/CAPTCHA al form, gestione privacy/GDPR e policy di conservazione.
@@ -43,7 +45,9 @@ Questo è un MVP da provare in locale, non ancora pronto per essere esposto su I
 
 ## API essenziali
 - `POST /api/register`
+- `POST /api/login` → `{token}`
+- `POST /api/forgot-password`
 - `GET /api/status`
-- `GET /api/participants` con header `X-Admin-Key`
-- `POST /api/draw` con header `X-Admin-Key`
+- `GET /api/participants` con header `X-Admin-Email` e `X-Admin-Key`
+- `POST /api/draw` con header `X-Admin-Email` e `X-Admin-Key`
 - `GET /api/my-assignment?token=...`
