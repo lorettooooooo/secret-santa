@@ -19,8 +19,7 @@ dialog.card{border:0;width:min(640px,calc(100% - 32px));margin:auto}dialog::back
 .close{margin:0;background:none;color:#20342c;font-size:1.8rem;line-height:1;padding:2px 10px}.pre{white-space:pre-line}
 .person{display:block;width:100%;text-align:left;background:#fff4d9;color:#20342c;font-weight:400;margin-top:10px}.person:hover{background:#ffeab8}
 button.danger{background:#a93226}.sound{margin:0;background:#ffffff1f;padding:6px 12px;font-size:1.2rem}
-.cookie-bar{position:fixed;left:16px;right:16px;bottom:16px;z-index:2;max-width:520px;margin:0 auto;background:#fffffff0}
-.check{display:flex;gap:8px;align-items:center;font-weight:400}.check input{width:auto}fieldset{border:0;padding:0;margin:0}textarea:disabled{background:#ffffff80;color:inherit}
+.cookie-bar{position:fixed;left:16px;right:16px;bottom:16px;z-index:2;max-width:520px;margin:0 auto;background:#fffffff0}fieldset{border:0;padding:0;margin:0}textarea:disabled{background:#ffffff80;color:inherit}
 .notice{padding:12px;border-radius:9px;background:#fff4d9;margin-top:12px}.error{background:#ffe7e5;color:#922}.row{display:flex;justify-content:space-between;gap:12px;align-items:center}
 </style></head><body><div id="scene" class="scene" aria-hidden="true"><video class="snow" src="media/snow.mp4" autoplay muted loop playsinline></video></div><main class="wrap">
 <header class="hero"><div class="row"><div>🎄 EDIZIONE 2026</div><button type="button" class="sound" id="sound" aria-pressed="true" aria-label="Disattiva musica">🔊</button></div><h1>🎅 Secret Santa</h1><p>Un regalo, una sorpresa, un pizzico di magia.</p><div id="count">Partecipanti: …</div></header>
@@ -71,9 +70,7 @@ button.danger{background:#a93226}.sound{margin:0;background:#ffffff1f;padding:6p
 <button type="button" class="danger" id="person-delete">Cancella profilo</button><div id="person-msg" aria-live="polite"></div></div></div>
 </section></main>
 <div id="cookies" class="card cookie-bar hidden" role="region" aria-label="Cookie">
-<p><b>🍪 Usiamo i cookie</b> (perché servono per Babbo Natale, hohoho!)</p>
-<label class="check"><input type="checkbox" id="cookie-music" checked> Musica di sottofondo</label>
-<button type="button" id="cookie-ok">Accetta</button></div>
+<p><b>🍪 Usiamo i cookie</b> (perché a Babbo Natale servono i biscotti, hohoho!)</p><button type="button" id="cookie-ok">Accetta</button></div>
 <dialog id="admin" class="card"><div class="row"><h2>Area organizzatore</h2><button type="button" class="close" id="admin-close" aria-label="Chiudi">×</button></div>
 <form id="admin-login">
 <label>Email</label><input id="admin-email" type="email" required maxlength="200" autocomplete="username">
@@ -130,8 +127,9 @@ const retryMusic=()=>{if(musicOn()&&music.paused)music.play().catch(()=>{})};
 function setMusic(on){$('sound').textContent=on?'🔊':'🔇';$('sound').setAttribute('aria-pressed',on);$('sound').setAttribute('aria-label',on?'Disattiva musica':'Attiva musica');
 if(!on)return music.pause();music.play().catch(()=>['pointerdown','keydown'].forEach(ev=>addEventListener(ev,retryMusic,{once:true})))}
 $('sound').onclick=()=>{const on=!musicOn();store.set('music',on?'on':'off');setMusic(on)};
-$('cookie-ok').onclick=()=>{const on=$('cookie-music').checked;store.set('consent','1');store.set('music',on?'on':'off');$('cookies').classList.add('hidden');setMusic(on)};
-if(!store.get('consent')){$('cookie-music').checked=musicOn();$('cookies').classList.remove('hidden')}
+// il clic su Accetta è anche l'interazione che sblocca l'audio nel browser
+$('cookie-ok').onclick=()=>{store.set('consent','1');$('cookies').classList.add('hidden');setMusic(musicOn())};
+if(!store.get('consent'))$('cookies').classList.remove('hidden');
 setMusic(musicOn());
 function parallax(){const k=matchMedia('(prefers-reduced-motion:reduce)').matches?0:.3,max=document.documentElement.scrollHeight-innerHeight;$('scene').style.height=innerHeight+max*k+'px';$('scene').style.transform=`translateY(${-scrollY*k}px)`}
 addEventListener('scroll',parallax,{passive:true});addEventListener('resize',parallax);parallax();
