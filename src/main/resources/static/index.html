@@ -138,7 +138,7 @@ let myToken;
 // t= evita che il browser mostri la foto vecchia dopo una modifica
 const photoUrl=path=>'/api/'+path+'?token='+encodeURIComponent(myToken)+'&t='+Date.now();
 function showPhoto(id,path){$(id).classList.remove('hidden');$(id).src=photoUrl(path)}
-const PREFS=['interests','ideas','avoid'];
+const PREFS =['interests','ideas','avoid'];
 function editPrefs(on){$('prefs-fields').disabled=!on;$('prefs-edit').classList.toggle('hidden',on);$('prefs-save').classList.toggle('hidden',!on)}
 async function loadPrefs(){const p=await api('/my-preferences?token='+encodeURIComponent(myToken));PREFS.forEach(k=>$('pref-'+k).value=p[k]||'');editPrefs(false)}
 $('prefs-edit').onclick=()=>{editPrefs(true);$('prefs-msg').textContent='';$('pref-interests').focus()};
