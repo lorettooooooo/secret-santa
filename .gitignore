@@ -10,6 +10,9 @@
 *.trace.db
 *.lock.db
 
+# Sorgenti media originali (ProRes 151 MB, licenza FX Elements: non redistribuibili)
+/media/
+
 # IntelliJ IDEA
 .idea/
 *.iml
