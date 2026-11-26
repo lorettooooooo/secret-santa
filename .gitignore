@@ -1,0 +1,23 @@
+# Claude Code
+/.claude/
+
+# Maven build output
+/target/
+
+# H2 database (contiene email e abbinamenti dei partecipanti)
+/data/
+*.mv.db
+*.trace.db
+*.lock.db
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Log e file locali
+*.log
+.env
+
+# OS
+.DS_Store
+Thumbs.db
