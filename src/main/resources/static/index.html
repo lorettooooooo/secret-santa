@@ -16,12 +16,25 @@ button.secondary{background:#e8eee9;color:#20342c}.muted{color:#65766c;font-size
 .tabs{display:flex;gap:8px;flex-wrap:wrap}.tabs button{margin:0}.tabs button.active{background:#d5e4d9;color:#173c32}
 .avatar{display:block;width:160px;height:160px;object-fit:cover;border-radius:50%;margin:8px 0 12px;box-shadow:0 3px 12px #173c3240}
 dialog.card{border:0;width:min(640px,calc(100% - 32px));margin:auto}dialog::backdrop{background:#0b1f1999}
+.close{margin:0;background:none;color:#20342c;font-size:1.8rem;line-height:1;padding:2px 10px}.pre{white-space:pre-line}
+.person{display:block;width:100%;text-align:left;background:#fff4d9;color:#20342c;font-weight:400;margin-top:10px}.person:hover{background:#ffeab8}
+button.danger{background:#a93226}.sound{margin:0;background:#ffffff1f;padding:6px 12px;font-size:1.2rem}
+.cookie-bar{position:fixed;left:16px;right:16px;bottom:16px;z-index:2;max-width:520px;margin:0 auto;background:#fffffff0}
+.check{display:flex;gap:8px;align-items:center;font-weight:400}.check input{width:auto}fieldset{border:0;padding:0;margin:0}textarea:disabled{background:#ffffff80;color:inherit}
 .notice{padding:12px;border-radius:9px;background:#fff4d9;margin-top:12px}.error{background:#ffe7e5;color:#922}.row{display:flex;justify-content:space-between;gap:12px;align-items:center}
 </style></head><body><div id="scene" class="scene" aria-hidden="true"><video class="snow" src="media/snow.mp4" autoplay muted loop playsinline></video></div><main class="wrap">
-<header class="hero"><div>🎄 EDIZIONE 2026</div><h1>🎅 Secret Santa</h1><p>Un regalo, una sorpresa, un pizzico di magia.</p><div id="count">Partecipanti: …</div></header>
+<header class="hero"><div class="row"><div>🎄 EDIZIONE 2026</div><button type="button" class="sound" id="sound" aria-pressed="true" aria-label="Disattiva musica">🔊</button></div><h1>🎅 Secret Santa</h1><p>Un regalo, una sorpresa, un pizzico di magia.</p><div id="count">Partecipanti: …</div></header>
+<section id="campaign" class="card hidden"><h2>La campagna</h2><p id="campaign-budget" class="result"></p><p id="campaign-notes" class="pre"></p></section>
 <section id="private" class="hidden">
 <div class="card"><h2>Il tuo profilo</h2><img id="my-photo" class="avatar" alt="Il tuo selfie" onerror="this.classList.add('hidden')">
-<label for="new-photo">Cambia immagine</label><input id="new-photo" type="file" accept="image/*" capture="user"><div id="photo-msg" aria-live="polite"></div></div>
+<label for="new-photo">Cambia immagine</label><input id="new-photo" type="file" accept="image/*" capture="user"><div id="photo-msg" aria-live="polite"></div>
+<h3>Le tue preferenze</h3>
+<form id="prefs"><fieldset id="prefs-fields" disabled>
+<label for="pref-interests">Interessi e hobby</label><textarea id="pref-interests" maxlength="2000"></textarea>
+<label for="pref-ideas">Idee regalo</label><textarea id="pref-ideas" maxlength="2000"></textarea>
+<label for="pref-avoid">Cosa preferisci evitare?</label><textarea id="pref-avoid" maxlength="2000"></textarea></fieldset>
+<button type="button" class="secondary" id="prefs-edit">Modifica</button><button id="prefs-save" class="hidden">Salva modifiche</button></form>
+<div id="prefs-msg" aria-live="polite"></div></div>
 <div class="card"><h2>La tua assegnazione 🎁</h2><img id="recipient-photo" class="avatar hidden" alt="" onerror="this.classList.add('hidden')"><div id="recipient" class="result"></div><div id="wishlist"></div></div>
 </section>
 <section id="public">
@@ -40,31 +53,86 @@ dialog.card{border:0;width:min(640px,calc(100% - 32px));margin:auto}dialog::back
 <label>Idee regalo</label><textarea name="ideas" maxlength="2000" placeholder="Cosa ti piacerebbe ricevere?"></textarea>
 <label>Cosa preferisci evitare?</label><textarea name="avoid" maxlength="2000"></textarea>
 <button>Conferma iscrizione</button></form><div id="signup-msg" aria-live="polite"></div></div>
+</section>
+<section id="admin-view" class="hidden">
+<div class="card"><div class="row"><h2>Area organizzatore</h2><button type="button" class="secondary" id="admin-logout">Esci</button></div>
+<div class="tabs" role="tablist"><button type="button" role="tab" id="tab-btn-settings" aria-selected="true">Impostazioni</button><button type="button" role="tab" class="secondary" id="tab-btn-people" aria-selected="false">Iscritti</button></div></div>
+<div id="tab-settings" class="card" role="tabpanel"><h2>Impostazioni</h2>
+<form id="settings-form">
+<label for="set-budget">Budget</label><input id="set-budget" maxlength="50" placeholder="es. 20 €">
+<label for="set-max">Massimo partecipanti</label><input id="set-max" type="number" min="3" max="500" required>
+<label for="set-notes">Note e regole</label><textarea id="set-notes" maxlength="2000" placeholder="Tema, data dello scambio, regole…"></textarea>
+<button>Salva impostazioni</button></form><div id="settings-msg" aria-live="polite"></div>
+<h3>Estrazione</h3><p class="muted">Invia a ogni iscritto una mail con la persona assegnata e chiude le iscrizioni. Non si può annullare.</p>
+<button type="button" id="draw">Esegui estrazione</button><div id="draw-msg" aria-live="polite"></div></div>
+<div id="tab-people" class="card hidden" role="tabpanel"><div id="participants"></div>
+<div id="person" class="hidden"><button type="button" class="secondary" id="person-back">← Torna all'elenco</button>
+<img id="person-photo" class="avatar" alt="" onerror="this.classList.add('hidden')"><h2 id="person-name"></h2><div id="person-details"></div>
+<button type="button" class="danger" id="person-delete">Cancella profilo</button><div id="person-msg" aria-live="polite"></div></div></div>
 </section></main>
-<dialog id="admin" class="card"><h2>Area organizzatore</h2>
+<div id="cookies" class="card cookie-bar hidden" role="region" aria-label="Cookie">
+<p><b>🍪 Usiamo i cookie</b> (perché servono per Babbo Natale, hohoho!)</p>
+<label class="check"><input type="checkbox" id="cookie-music" checked> Musica di sottofondo</label>
+<button type="button" id="cookie-ok">Accetta</button></div>
+<dialog id="admin" class="card"><div class="row"><h2>Area organizzatore</h2><button type="button" class="close" id="admin-close" aria-label="Chiudi">×</button></div>
 <form id="admin-login">
 <label>Email</label><input id="admin-email" type="email" required maxlength="200" autocomplete="username">
 <label>Password</label><input id="admin-key" type="password" required autocomplete="current-password">
-<div class="tabs"><button>Accedi</button><button type="button" class="secondary" id="admin-close">Chiudi</button></div></form>
-<div id="admin-panel" class="tabs hidden"><button class="secondary" id="load">Carica iscritti</button><button id="draw">Esegui estrazione</button></div>
-<div id="admin-msg" aria-live="polite"></div><div id="participants"></div></dialog>
+<button>Accedi</button></form>
+<div id="admin-msg" aria-live="polite"></div></dialog>
 <script>
 const $=id=>document.getElementById(id);
 async function api(path,opts={}){const r=await fetch('/api'+path,{...opts,headers:{'Content-Type':'application/json',...(opts.headers||{})}});let data={};try{data=await r.json()}catch{}if(!r.ok)throw Error(data.message||'Errore nella richiesta');return data}
-async function refresh(){try{const s=await api('/status');$('count').textContent=`Partecipanti iscritti: ${s.count}/20 · ${s.drawn?'Estrazione effettuata':'Iscrizioni aperte'}`}catch{$('count').textContent='Servizio non disponibile'}}
+let drawn=false;
+async function refresh(){try{const [s,c]=await Promise.all([api('/status'),api('/settings')]);drawn=s.drawn;$('count').textContent=`Partecipanti iscritti: ${s.count}/${s.max} · ${s.drawn?'Estrazione effettuata':'Iscrizioni aperte'}`;showCampaign(c)}catch{$('count').textContent='Servizio non disponibile'}}
+const adminMode=()=>!$('admin-view').classList.contains('hidden');
+function showCampaign(c){$('campaign-budget').textContent=c.budget?'Budget: '+c.budget:'';$('campaign-notes').textContent=c.notes||'';$('campaign').classList.toggle('hidden',(!c.budget&&!c.notes)||adminMode())}
 // ridimensiona il selfie a max 640px in JPEG, così la richiesta resta leggera
 async function selfie(file){const img=await createImageBitmap(file),s=Math.min(1,640/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.8)}
-$('signup').addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.target),body=Object.fromEntries(f.entries());try{body.photo=await selfie($('photo').files[0]);const d=await api('/register',{method:'POST',body:JSON.stringify(body)});$('signup-msg').className='notice';$('signup-msg').textContent=d.message;e.target.reset();refresh()}catch(err){$('signup-msg').className='notice error';$('signup-msg').textContent=err.message}});
+$('signup').addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.target),body=Object.fromEntries(f.entries());try{body.photo=await selfie($('photo').files[0]);const d=await api('/register',{method:'POST',body:JSON.stringify(body)});$('signup-msg').className='notice';$('signup-msg').textContent=d.message;e.target.reset();refresh();hohoho()}catch(err){$('signup-msg').className='notice error';$('signup-msg').textContent=err.message}});
 const adminHeaders=()=>({'X-Admin-Email':$('admin-email').value,'X-Admin-Key':$('admin-key').value});
-async function loadParticipants(){try{const people=await api('/participants',{headers:adminHeaders()});$('participants').innerHTML='<h3>Iscritti ('+people.length+')</h3>'+people.map(p=>`<div class="notice"><b>${esc(p.name)}</b><br>${esc(p.email)}<br><small>Interessi: ${esc(p.interests||'—')} · Idee: ${esc(p.ideas||'—')}</small></div>`).join('');$('admin-msg').textContent='Elenco aggiornato';return true}catch(e){$('admin-msg').textContent=e.message;return false}}
-$('load').onclick=loadParticipants;
-// l'accesso è verificato caricando gli iscritti: se le credenziali sono giuste compaiono i comandi
-$('admin-login').addEventListener('submit',async e=>{e.preventDefault();if(await loadParticipants()){$('admin-login').classList.add('hidden');$('admin-panel').classList.remove('hidden')}});
+let people=[],person=null;
+async function loadParticipants(){people=await api('/participants',{headers:adminHeaders()});$('person').classList.add('hidden');$('participants').classList.remove('hidden');$('participants').innerHTML='<h2>Iscritti ('+people.length+')</h2>'+(people.length?'':'<p class="muted">Nessun iscritto per ora.</p>')+people.map((p,i)=>`<button type="button" class="person" data-i="${i}"><b>${esc(p.name)}</b><br>${esc(p.email)}</button>`).join('')}
+$('participants').onclick=e=>{const b=e.target.closest('.person');if(b)openPerson(people[b.dataset.i])};
+async function openPerson(p){person=p;$('participants').classList.add('hidden');$('person').classList.remove('hidden');$('person-msg').textContent='';$('person-name').textContent=p.name;$('person-photo').alt='Foto di '+p.name;$('person-photo').classList.add('hidden');
+$('person-details').innerHTML='<p><b>Email:</b> '+esc(p.email)+'</p><p><b>Interessi:</b> '+esc(p.interests||'Non indicati')+'</p><p><b>Idee:</b> '+esc(p.ideas||'Non indicate')+'</p><p><b>Da evitare:</b> '+esc(p.avoid||'Non indicato')+'</p>';
+$('person-delete').classList.toggle('hidden',drawn);
+// la foto richiede gli header admin, quindi niente <img src> diretto: fetch e blob
+const r=await fetch('/api/participants/'+p.id+'/photo',{headers:adminHeaders()});if(r.ok&&person===p){URL.revokeObjectURL($('person-photo').src);$('person-photo').src=URL.createObjectURL(await r.blob());$('person-photo').classList.remove('hidden')}}
+$('person-back').onclick=loadParticipants;
+$('person-delete').onclick=async()=>{if(!confirm('Cancellare il profilo di '+person.name+'? L’operazione non si può annullare.'))return;try{const d=await api('/participants/'+person.id,{method:'DELETE',headers:adminHeaders()});await loadParticipants();$('participants').insertAdjacentHTML('afterbegin','<div class="notice">'+esc(d.message)+'</div>');refresh()}catch(e){$('person-msg').className='notice error';$('person-msg').textContent=e.message}};
+function showTab(name){['settings','people'].forEach(t=>{const on=t===name;$('tab-'+t).classList.toggle('hidden',!on);$('tab-btn-'+t).classList.toggle('secondary',!on);$('tab-btn-'+t).setAttribute('aria-selected',on)});if(name==='people')loadParticipants().catch(e=>$('participants').textContent=e.message)}
+$('tab-btn-settings').onclick=()=>showTab('settings');$('tab-btn-people').onclick=()=>showTab('people');
+async function loadSettings(){const c=await api('/settings');$('set-budget').value=c.budget||'';$('set-max').value=c.maxParticipants;$('set-notes').value=c.notes||''}
+$('settings-form').addEventListener('submit',async e=>{e.preventDefault();try{await api('/settings',{method:'PUT',headers:adminHeaders(),body:JSON.stringify({budget:$('set-budget').value,maxParticipants:+$('set-max').value,notes:$('set-notes').value})});$('settings-msg').className='notice';$('settings-msg').textContent='Impostazioni salvate';refresh()}catch(err){$('settings-msg').className='notice error';$('settings-msg').textContent=err.message}});
+// l'accesso è verificato caricando gli iscritti: se le credenziali sono giuste si apre la vista organizzatore
+$('admin-login').addEventListener('submit',async e=>{e.preventDefault();try{await loadParticipants();await loadSettings();$('admin').close();['public','private','campaign'].forEach(id=>$(id).classList.add('hidden'));$('admin-view').classList.remove('hidden');showTab('settings');scrollTo(0,0)}catch(err){$('admin-msg').className='notice error';$('admin-msg').textContent=err.message}});
+// ricaricare la pagina cancella le credenziali, che stanno solo nei campi del popup
+$('admin-logout').onclick=()=>location.reload();
 $('admin-close').onclick=()=>$('admin').close();
+// click sullo sfondo scuro: il target è il dialog stesso e il punto cade fuori dal riquadro
+$('admin').addEventListener('click',e=>{const r=$('admin').getBoundingClientRect();if(e.target===$('admin')&&(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom))$('admin').close()});
 // sequenza segreta per aprire l'area organizzatore: alto sx, basso sx, basso dx, alto dx (entro 5 secondi)
 const SECRET=['tl','bl','br','tr'];let secret=[],secretAt=0;
-addEventListener('pointerdown',e=>{if($('admin').open)return;const z=80,c=(e.clientY<z?'t':e.clientY>innerHeight-z?'b':'')+(e.clientX<z?'l':e.clientX>innerWidth-z?'r':'');if(Date.now()-secretAt>5000)secret=[];secretAt=Date.now();secret.push(c);if(secret.some((s,i)=>s!==SECRET[i]))secret=c===SECRET[0]?[c]:[];if(secret.length===SECRET.length){secret=[];$('admin').showModal()}});
-$('draw').onclick=async()=>{if(!confirm('Confermi l’estrazione? Dopo il sorteggio non sarà possibile iscriversi.'))return;try{const d=await api('/draw',{method:'POST',headers:adminHeaders()});$('admin-msg').textContent=d.message;refresh()}catch(e){$('admin-msg').textContent=e.message}};
+const corner=e=>{const z=80;return (e.clientY<z?'t':e.clientY>innerHeight-z?'b':'')+(e.clientX<z?'l':e.clientX>innerWidth-z?'r':'')};
+// risata di Babbo Natale (muta se l'audio è spento): all'iscrizione e con 3 tocchi di fila nell'angolo in basso a sinistra, max 1,5 s tra uno e l'altro
+const laugh=new Audio('media/Hohoho.mp3');let blTaps=0,blAt=0;
+function hohoho(){if(musicOn()){laugh.currentTime=0;laugh.play().catch(()=>{})}}
+addEventListener('pointerdown',e=>{if(corner(e)!=='bl'){blTaps=0;return}blTaps=Date.now()-blAt<1500?blTaps+1:1;blAt=Date.now();if(blTaps===3){blTaps=0;hohoho()}});
+addEventListener('pointerdown',e=>{if($('admin').open||adminMode())return;const c=corner(e);if(Date.now()-secretAt>5000)secret=[];secretAt=Date.now();secret.push(c);if(secret.some((s,i)=>s!==SECRET[i]))secret=c===SECRET[0]?[c]:[];if(secret.length===SECRET.length){secret=[];$('admin').showModal()}});
+$('draw').onclick=async()=>{if(!confirm('Confermi l’estrazione? Ogni iscritto riceverà la mail con la persona assegnata e le iscrizioni verranno chiuse.'))return;try{const d=await api('/draw',{method:'POST',headers:adminHeaders()});$('draw-msg').className='notice';$('draw-msg').textContent=d.message;refresh()}catch(e){$('draw-msg').className='notice error';$('draw-msg').textContent=e.message}};
+// localStorage può lanciare eccezioni (navigazione privata, dati bloccati): in quel caso si usano i default
+const store={get:k=>{try{return localStorage.getItem(k)}catch{return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch{}}};
+const music=new Audio('media/Jinglebells.mp3');music.loop=true;music.volume=.4;
+const musicOn=()=>store.get('music')!=='off';
+// i browser bloccano l'audio finché l'utente non interagisce: se play() viene rifiutato si riprova al primo clic o tasto
+const retryMusic=()=>{if(musicOn()&&music.paused)music.play().catch(()=>{})};
+function setMusic(on){$('sound').textContent=on?'🔊':'🔇';$('sound').setAttribute('aria-pressed',on);$('sound').setAttribute('aria-label',on?'Disattiva musica':'Attiva musica');
+if(!on)return music.pause();music.play().catch(()=>['pointerdown','keydown'].forEach(ev=>addEventListener(ev,retryMusic,{once:true})))}
+$('sound').onclick=()=>{const on=!musicOn();store.set('music',on?'on':'off');setMusic(on)};
+$('cookie-ok').onclick=()=>{const on=$('cookie-music').checked;store.set('consent','1');store.set('music',on?'on':'off');$('cookies').classList.add('hidden');setMusic(on)};
+if(!store.get('consent')){$('cookie-music').checked=musicOn();$('cookies').classList.remove('hidden')}
+setMusic(musicOn());
 function parallax(){const k=matchMedia('(prefers-reduced-motion:reduce)').matches?0:.3,max=document.documentElement.scrollHeight-innerHeight;$('scene').style.height=innerHeight+max*k+'px';$('scene').style.transform=`translateY(${-scrollY*k}px)`}
 addEventListener('scroll',parallax,{passive:true});addEventListener('resize',parallax);parallax();
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -72,7 +140,12 @@ let myToken;
 // t= evita che il browser mostri la foto vecchia dopo una modifica
 const photoUrl=path=>'/api/'+path+'?token='+encodeURIComponent(myToken)+'&t='+Date.now();
 function showPhoto(id,path){$(id).classList.remove('hidden');$(id).src=photoUrl(path)}
-async function showPrivate(token){myToken=token;$('public').classList.add('hidden');$('private').classList.remove('hidden');showPhoto('my-photo','my-photo');try{const a=await api('/my-assignment?token='+encodeURIComponent(token));$('recipient-photo').alt='Foto di '+a.recipient;showPhoto('recipient-photo','recipient-photo');$('recipient').textContent=a.recipient;$('wishlist').innerHTML='<h3>Wishlist</h3><p><b>Interessi:</b> '+esc(a.interests||'Non indicati')+'</p><p><b>Idee:</b> '+esc(a.ideas||'Non indicate')+'</p><p><b>Da evitare:</b> '+esc(a.avoid||'Non indicato')+'</p>'}catch(e){$('recipient').textContent=e.message}}
+const PREFS=['interests','ideas','avoid'];
+function editPrefs(on){$('prefs-fields').disabled=!on;$('prefs-edit').classList.toggle('hidden',on);$('prefs-save').classList.toggle('hidden',!on)}
+async function loadPrefs(){const p=await api('/my-preferences?token='+encodeURIComponent(myToken));PREFS.forEach(k=>$('pref-'+k).value=p[k]||'');editPrefs(false)}
+$('prefs-edit').onclick=()=>{editPrefs(true);$('prefs-msg').textContent='';$('pref-interests').focus()};
+$('prefs').addEventListener('submit',async e=>{e.preventDefault();try{await api('/my-preferences?token='+encodeURIComponent(myToken),{method:'PUT',body:JSON.stringify(Object.fromEntries(PREFS.map(k=>[k,$('pref-'+k).value])))});editPrefs(false);$('prefs-msg').className='notice';$('prefs-msg').textContent='Preferenze salvate'}catch(err){$('prefs-msg').className='notice error';$('prefs-msg').textContent=err.message}});
+async function showPrivate(token){myToken=token;$('public').classList.add('hidden');$('private').classList.remove('hidden');showPhoto('my-photo','my-photo');loadPrefs().catch(e=>{$('prefs-msg').className='notice error';$('prefs-msg').textContent=e.message});try{const a=await api('/my-assignment?token='+encodeURIComponent(token));$('recipient-photo').alt='Foto di '+a.recipient;showPhoto('recipient-photo','recipient-photo');$('recipient').textContent=a.recipient;$('wishlist').innerHTML='<h3>Wishlist</h3><p><b>Interessi:</b> '+esc(a.interests||'Non indicati')+'</p><p><b>Idee:</b> '+esc(a.ideas||'Non indicate')+'</p><p><b>Da evitare:</b> '+esc(a.avoid||'Non indicato')+'</p>'}catch(e){$('recipient').textContent=e.message}}
 $('new-photo').onchange=async e=>{if(!e.target.files[0])return;try{const d=await api('/my-photo?token='+encodeURIComponent(myToken),{method:'PUT',body:JSON.stringify({photo:await selfie(e.target.files[0])})});showPhoto('my-photo','my-photo');$('photo-msg').className='notice';$('photo-msg').textContent=d.message}catch(err){$('photo-msg').className='notice error';$('photo-msg').textContent=err.message}e.target.value=''};
 $('login').addEventListener('submit',async e=>{e.preventDefault();const body=Object.fromEntries(new FormData(e.target).entries());try{const d=await api('/login',{method:'POST',body:JSON.stringify(body)});showPrivate(d.token)}catch(err){$('login-msg').className='notice error';$('login-msg').textContent=err.message}});
 $('forgot').onclick=async()=>{const email=$('login').email;if(!email.reportValidity())return;try{const d=await api('/forgot-password',{method:'POST',body:JSON.stringify({email:email.value})});$('login-msg').className='notice';$('login-msg').textContent=d.message}catch(err){$('login-msg').className='notice error';$('login-msg').textContent=err.message}};

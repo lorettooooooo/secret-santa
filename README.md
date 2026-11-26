@@ -18,6 +18,8 @@ La base dati H2 viene salvata nella cartella `./data`.
 - Controllo email duplicata e limite massimo di 20 partecipanti.
 - Password generata all'iscrizione (es. `Snowball103#`) e inviata via email; a DB solo l'hash SHA-256.
 - Login con email e password; "Password dimenticata?" ne genera e invia una nuova.
+- Profilo: propria foto e preferenze modificabili; dopo l'estrazione foto, nome e preferenze della persona assegnata.
+- Area organizzatore: impostazioni della campagna (budget, note, massimo partecipanti, visibili a tutti), elenco iscritti con profilo e cancellazione (fino all'estrazione), estrazione con email a tutti.
 - Estrazione senza auto-assegnazioni e senza destinatari duplicati.
 - Link privato con token individuale per mostrare solo il proprio destinatario.
 - Email tramite API Brevo, se configurata.
@@ -48,6 +50,10 @@ Questo è un MVP da provare in locale, non ancora pronto per essere esposto su I
 - `POST /api/login` → `{token}`
 - `POST /api/forgot-password`
 - `GET /api/status`
-- `GET /api/participants` con header `X-Admin-Email` e `X-Admin-Key`
-- `POST /api/draw` con header `X-Admin-Email` e `X-Admin-Key`
+- `GET /api/settings`, `PUT /api/settings` (admin)
+- `GET /api/participants` (admin), `GET /api/participants/{id}/photo` (admin), `DELETE /api/participants/{id}` (admin)
+- `GET|PUT /api/my-preferences?token=...`, `GET|PUT /api/my-photo?token=...`, `GET /api/recipient-photo?token=...`
+- `POST /api/draw` (admin)
 - `GET /api/my-assignment?token=...`
+
+Gli endpoint admin richiedono gli header `X-Admin-Email` e `X-Admin-Key`.

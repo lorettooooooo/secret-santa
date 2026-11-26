@@ -6,16 +6,18 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 import java.security.MessageDigest;
 
 @RestController
 @RequestMapping("/api")
 class ApiController {
   private final ParticipantRepository repo;
+  private final CampaignSettingsRepository settingsRepo;
   private final MailService mail;
   @Value("${app.admin-email}") String adminEmail;
   @Value("${app.admin-key}") String adminKey;
-  ApiController(ParticipantRepository repo, MailService mail) { this.repo=repo; this.mail=mail; }
+  ApiController(ParticipantRepository repo, CampaignSettingsRepository settingsRepo, MailService mail) { this.repo=repo; this.settingsRepo=settingsRepo; this.mail=mail; }
 
   record Registration(String name, String email, String photo, String interests, String ideas, String avoid) {}
   record Login(String email, String password) {}
@@ -23,9 +25,11 @@ class ApiController {
   record PhotoUpload(String photo) {}
   // shortcut: contatore in memoria, si azzera al riavvio; se l'app va su Internet usare un rate limiter vero
   private final Map<String,Integer> failedLogins = new ConcurrentHashMap<>();
-  record PublicParticipant(String name, String email, String interests, String ideas, String avoid) {}
+  record PublicParticipant(Long id, String name, String email, String interests, String ideas, String avoid) {}
   record PrivateAssignment(String participant, String recipient, String interests, String ideas, String avoid) {}
-  record Status(int count, boolean drawn, boolean mailConfigured) {}
+  record Status(int count, int max, boolean drawn, boolean mailConfigured) {}
+  record Settings(String budget, String notes, int maxParticipants) {}
+  record Preferences(String interests, String ideas, String avoid) {}
 
   private void requireAdmin(String email, String key) {
     // & invece di && per confrontare sempre entrambi e non rivelare quale dei due è sbagliato
@@ -38,13 +42,43 @@ class ApiController {
   @GetMapping("/status")
   Status status() {
     List<Participant> all=repo.findAll();
-    return new Status(all.size(), !all.isEmpty() && all.stream().allMatch(p->p.drawn), mail.configured());
+    return new Status(all.size(), settings().maxParticipants, !all.isEmpty() && all.stream().allMatch(p->p.drawn), mail.configured());
+  }
+
+  private CampaignSettings settings() {
+    return settingsRepo.findById(1L).orElseGet(CampaignSettings::new);
+  }
+
+  @GetMapping("/settings")
+  Settings getSettings() {
+    CampaignSettings s=settings();
+    return new Settings(s.budget,s.notes,s.maxParticipants);
+  }
+
+  @PutMapping("/settings")
+  Settings updateSettings(@RequestHeader(value="X-Admin-Email",required=false) String email,
+                          @RequestHeader(value="X-Admin-Key",required=false) String key, @RequestBody Settings in) {
+    requireAdmin(email,key);
+    if (in.maxParticipants()<3 || in.maxParticipants()>500)
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Il massimo partecipanti deve essere tra 3 e 500");
+    if (in.maxParticipants()<repo.count())
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ci sono già "+repo.count()+" iscritti: il massimo non può essere inferiore");
+    if ((in.budget()!=null && in.budget().length()>50) || (in.notes()!=null && in.notes().length()>2000))
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Budget o note troppo lunghi");
+    CampaignSettings s=settings();
+    s.budget=in.budget()==null ? null : in.budget().trim();
+    s.notes=in.notes();
+    s.maxParticipants=in.maxParticipants();
+    settingsRepo.save(s);
+    return getSettings();
   }
 
   @PostMapping("/register")
   ResponseEntity<?> register(@RequestBody Registration r) {
     if (r.name()==null || r.name().isBlank() || r.email()==null || !r.email().matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"))
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nome ed email validi sono obbligatori");    if (repo.count() >= 20) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Limite massimo di 20 partecipanti raggiunto");
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nome ed email validi sono obbligatori");
+    int max=settings().maxParticipants;
+    if (repo.count() >= max) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Limite massimo di "+max+" partecipanti raggiunto");
     if (repo.findByEmailIgnoreCase(r.email().trim()).isPresent())
       throw new ResponseStatusException(HttpStatus.CONFLICT, "Email già iscritta");
     if (repo.findAll().stream().anyMatch(p->p.drawn))
@@ -115,7 +149,25 @@ class ApiController {
   List<PublicParticipant> participants(@RequestHeader(value="X-Admin-Email",required=false) String email,
                                        @RequestHeader(value="X-Admin-Key",required=false) String key) {
     requireAdmin(email,key);
-    return repo.findAllByOrderByNameAsc().stream().map(p->new PublicParticipant(p.name,p.email,p.interests,p.ideas,p.avoid)).toList();
+    return repo.findAllByOrderByNameAsc().stream().map(p->new PublicParticipant(p.id,p.name,p.email,p.interests,p.ideas,p.avoid)).toList();
+  }
+
+  @GetMapping("/participants/{id}/photo")
+  ResponseEntity<byte[]> participantPhoto(@RequestHeader(value="X-Admin-Email",required=false) String email,
+                                          @RequestHeader(value="X-Admin-Key",required=false) String key, @PathVariable Long id) {
+    requireAdmin(email,key);
+    return jpeg(repo.findById(id).map(p->p.photo).orElse(null));
+  }
+
+  @DeleteMapping("/participants/{id}")
+  Map<String,String> deleteParticipant(@RequestHeader(value="X-Admin-Email",required=false) String email,
+                                       @RequestHeader(value="X-Admin-Key",required=false) String key, @PathVariable Long id) {
+    requireAdmin(email,key);
+    Participant p=repo.findById(id).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND));
+    // dopo l'estrazione cancellare romperebbe gli abbinamenti
+    if (p.drawn) throw new ResponseStatusException(HttpStatus.CONFLICT, "Campagna attiva: dopo l'estrazione non si possono cancellare profili");
+    repo.delete(p);
+    return Map.of("message","Profilo di "+p.name+" cancellato");
   }
 
   @PostMapping("/draw")
@@ -144,8 +196,9 @@ class ApiController {
       giver.drawn=true;
     }
     repo.saveAll(people);
+    String budget=settings().budget;
     for(Participant p:people) {
-      try { mail.sendInvitation(p); }
+      try { mail.sendInvitation(p,budget); }
       catch(Exception ex) { System.err.println("Invio email fallito per "+p.email+": "+ex.getMessage()); }
     }
     return Map.of("message","Estrazione completata. Le email sono state inviate se Brevo è configurato; altrimenti i link sono nel log.");
@@ -155,7 +208,26 @@ class ApiController {
   PrivateAssignment assignment(@RequestParam String token) {
     Participant p=byToken(token);
     if(!p.drawn) throw new ResponseStatusException(HttpStatus.CONFLICT,"L'estrazione non è ancora stata effettuata");
-    return new PrivateAssignment(p.name,p.assignedName,p.assignedInterests,p.assignedIdeas,p.assignedAvoid);
+    // preferenze attuali del destinatario, che può modificarle anche dopo l'estrazione; la copia serve solo alle estrazioni senza assignedId
+    Optional<Participant> r=p.assignedId==null ? Optional.empty() : repo.findById(p.assignedId);
+    return r.map(x->new PrivateAssignment(p.name,x.name,x.interests,x.ideas,x.avoid))
+      .orElse(new PrivateAssignment(p.name,p.assignedName,p.assignedInterests,p.assignedIdeas,p.assignedAvoid));
+  }
+
+  @GetMapping("/my-preferences")
+  Preferences myPreferences(@RequestParam String token) {
+    Participant p=byToken(token);
+    return new Preferences(p.interests,p.ideas,p.avoid);
+  }
+
+  @PutMapping("/my-preferences")
+  Preferences updateMyPreferences(@RequestParam String token, @RequestBody Preferences in) {
+    if (Stream.of(in.interests(),in.ideas(),in.avoid()).anyMatch(s->s!=null && s.length()>2000))
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ogni campo può avere al massimo 2000 caratteri");
+    Participant p=byToken(token);
+    p.interests=in.interests(); p.ideas=in.ideas(); p.avoid=in.avoid();
+    repo.save(p);
+    return new Preferences(p.interests,p.ideas,p.avoid);
   }
 
   @GetMapping("/my-photo")

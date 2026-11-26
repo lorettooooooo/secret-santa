@@ -18,11 +18,17 @@ class MailService {
     brevo = RestClient.builder().baseUrl("https://api.brevo.com/v3").requestFactory(timeouts).build();
   }
   boolean configured() { return apiKey != null && !apiKey.isBlank() && from != null && !from.isBlank(); }
-  void sendInvitation(Participant p) {
+  void sendInvitation(Participant p, String budget) {
     String url = baseUrl.replaceAll("/$", "") + "/?token=" + p.accessToken;
-    send(p, "Il tuo Secret Santa 🎅", "Ciao " + p.name + "! La tua assegnazione è pronta. Apri questo link privato: " + url,
-      "Link privato per " + p.email + ": " + url);
+    String text = "Ciao " + p.name + "!\n\nL'estrazione è fatta: dovrai fare un regalo a " + p.assignedName + ".\n\n"
+      + "Interessi: " + orDash(p.assignedInterests) + "\n"
+      + "Idee regalo: " + orDash(p.assignedIdeas) + "\n"
+      + "Da evitare: " + orDash(p.assignedAvoid) + "\n"
+      + (budget == null || budget.isBlank() ? "" : "\nBudget: " + budget + "\n")
+      + "\nNel tuo profilo trovi anche la sua foto: " + url;
+    send(p, "Il tuo Secret Santa 🎅", text, "Link privato per " + p.email + ": " + url);
   }
+  private static String orDash(String s) { return s == null || s.isBlank() ? "—" : s; }
   void sendPassword(Participant p, String password) {
     send(p, "La tua password Secret Santa 🎄", "Ciao " + p.name + "! Accedi a " + baseUrl + " con la tua email e questa password: " + password,
       "Password per " + p.email + ": " + password);
