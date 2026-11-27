@@ -40,8 +40,8 @@ button.danger{background:#a93226}.sound{margin:0;background:#ffffff1f;padding:6p
 <div class="card"><h2>Login</h2><p class="muted">Già iscritto? Accedi al tuo profilo.</p>
 <form id="login">
 <label>Email</label><input name="email" type="email" required maxlength="200" autocomplete="username">
-<label>Password</label><input name="password" type="password" required maxlength="100" autocomplete="current-password">
-<div class="tabs"><button>Accedi</button><button type="button" class="secondary" id="forgot">Password dimenticata?</button></div></form>
+<div id="login-password"><label>Password</label><input name="password" type="password" required maxlength="100" autocomplete="current-password"></div>
+<div class="tabs"><button id="login-submit">Accedi</button><button type="button" class="secondary" id="forgot">Password dimenticata?</button></div></form>
 <div id="login-msg" aria-live="polite"></div></div>
 <div class="card"><h2>Partecipa</h2><p class="muted">Inserisci i tuoi dati e qualche indicazione per aiutare il tuo Secret Santa.</p>
 <form id="signup">
@@ -153,7 +153,10 @@ $('prefs-edit').onclick=()=>{editPrefs(true);$('prefs-msg').textContent='';$('pr
 $('prefs').addEventListener('submit',async e=>{e.preventDefault();try{await api('/my-preferences?token='+encodeURIComponent(myToken),{method:'PUT',body:JSON.stringify(Object.fromEntries(PREFS.map(k=>[k,$('pref-'+k).value])))});editPrefs(false);$('prefs-msg').className='notice';$('prefs-msg').textContent='Preferenze salvate'}catch(err){$('prefs-msg').className='notice error';$('prefs-msg').textContent=err.message}});
 async function showPrivate(token){myToken=token;$('public').classList.add('hidden');$('private').classList.remove('hidden');showPhoto('my-photo','my-photo');loadPrefs().catch(e=>{$('prefs-msg').className='notice error';$('prefs-msg').textContent=e.message});try{const a=await api('/my-assignment?token='+encodeURIComponent(token));$('recipient-photo').alt='Foto di '+a.recipient;showPhoto('recipient-photo','recipient-photo');$('recipient').textContent=a.recipient;$('wishlist').innerHTML='<h3>Wishlist</h3><p><b>Interessi:</b> '+esc(a.interests||'Non indicati')+'</p><p><b>Idee:</b> '+esc(a.ideas||'Non indicate')+'</p><p><b>Da evitare:</b> '+esc(a.avoid||'Non indicato')+'</p>'}catch(e){$('recipient').textContent=e.message}}
 $('new-photo').onchange=async e=>{if(!e.target.files[0])return;try{const d=await api('/my-photo?token='+encodeURIComponent(myToken),{method:'PUT',body:JSON.stringify({photo:await selfie(e.target.files[0])})});showPhoto('my-photo','my-photo');$('photo-msg').className='notice';$('photo-msg').textContent=d.message}catch(err){$('photo-msg').className='notice error';$('photo-msg').textContent=err.message}e.target.value=''};
-$('login').addEventListener('submit',async e=>{e.preventDefault();const body=Object.fromEntries(new FormData(e.target).entries());try{const d=await api('/login',{method:'POST',body:JSON.stringify(body)});showPrivate(d.token)}catch(err){$('login-msg').className='notice error';$('login-msg').textContent=err.message}});
-$('forgot').onclick=async()=>{const email=$('login').email;if(!email.reportValidity())return;try{const d=await api('/forgot-password',{method:'POST',body:JSON.stringify({email:email.value})});$('login-msg').className='notice';$('login-msg').textContent=d.message}catch(err){$('login-msg').className='notice error';$('login-msg').textContent=err.message}};
+// modalità recupero: password nascosta e disabilitata, così il form valida e invia solo l'email
+let recovering=false;
+function loginMode(r){recovering=r;$('login-password').classList.toggle('hidden',r);$('login').password.disabled=r;$('login-submit').textContent=r?'Recupera password':'Accedi';$('forgot').textContent=r?'Accedi':'Password dimenticata?';$('login-msg').textContent=''}
+$('forgot').onclick=()=>loginMode(!recovering);
+$('login').addEventListener('submit',async e=>{e.preventDefault();const body=Object.fromEntries(new FormData(e.target).entries());try{if(recovering){const d=await api('/forgot-password',{method:'POST',body:JSON.stringify(body)});$('login-msg').className='notice';$('login-msg').textContent=d.message;return}const d=await api('/login',{method:'POST',body:JSON.stringify(body)});showPrivate(d.token)}catch(err){$('login-msg').className='notice error';$('login-msg').textContent=err.message}});
 (async()=>{const token=new URLSearchParams(location.search).get('token');if(token)await showPrivate(token);await refresh()})();
 </script></body></html>
