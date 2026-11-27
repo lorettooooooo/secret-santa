@@ -63,7 +63,11 @@ button.danger{background:#a93226}.sound{margin:0;background:#ffffff1f;padding:6p
 <label for="set-notes">Note e regole</label><textarea id="set-notes" maxlength="2000" placeholder="Tema, data dello scambio, regole…"></textarea>
 <button>Salva impostazioni</button></form><div id="settings-msg" aria-live="polite"></div>
 <h3>Estrazione</h3><p class="muted">Invia a ogni iscritto una mail con la persona assegnata e chiude le iscrizioni. Non si può annullare.</p>
-<button type="button" id="draw">Esegui estrazione</button><div id="draw-msg" aria-live="polite"></div></div>
+<button type="button" id="draw">Esegui estrazione</button><div id="draw-msg" aria-live="polite"></div>
+<h3>Backup</h3><p class="muted">Scarica tutti i dati (iscritti, foto, abbinamenti, impostazioni) o ripristinali da un file scaricato in precedenza.</p>
+<button type="button" class="secondary" id="backup-download">Scarica backup</button>
+<label for="backup-file">Ripristina da file</label><input id="backup-file" type="file" accept=".json,application/json">
+<div id="backup-msg" aria-live="polite"></div></div>
 <div id="tab-people" class="card hidden" role="tabpanel"><div id="participants"></div>
 <div id="person" class="hidden"><button type="button" class="secondary" id="person-back">← Torna all'elenco</button>
 <img id="person-photo" class="avatar" alt="" onerror="this.classList.add('hidden')"><h2 id="person-name"></h2><div id="person-details"></div>
@@ -119,6 +123,8 @@ const laugh=new Audio('media/Hohoho.mp3');let blTaps=0,blAt=0;
 function hohoho(){if(musicOn()){laugh.currentTime=0;laugh.play().catch(()=>{})}}
 addEventListener('pointerdown',e=>{if(corner(e)!=='bl'){blTaps=0;return}blTaps=Date.now()-blAt<1500?blTaps+1:1;blAt=Date.now();if(blTaps===3){blTaps=0;hohoho()}});
 addEventListener('pointerdown',e=>{if($('admin').open||adminMode())return;const c=corner(e);if(Date.now()-secretAt>5000)secret=[];secretAt=Date.now();secret.push(c);if(secret.some((s,i)=>s!==SECRET[i]))secret=c===SECRET[0]?[c]:[];if(secret.length===SECRET.length){secret=[];$('admin').showModal();adminOpenedAt=Date.now()}});
+$('backup-download').onclick=async()=>{try{const r=await fetch('/api/backup',{headers:adminHeaders()});if(!r.ok)throw Error('Download non riuscito');const a=document.createElement('a');a.href=URL.createObjectURL(await r.blob());a.download=r.headers.get('Content-Disposition').match(/filename="(.+)"/)[1];a.click();URL.revokeObjectURL(a.href)}catch(e){$('backup-msg').className='notice error';$('backup-msg').textContent=e.message}};
+$('backup-file').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f||!confirm('Ripristinare il backup «'+f.name+'»? I dati attuali verranno sostituiti (ne resta una copia sul server).'))return;try{const d=await api('/restore',{method:'POST',headers:adminHeaders(),body:await f.text()});$('backup-msg').className='notice';$('backup-msg').textContent=d.message;await loadParticipants();await loadSettings();refresh()}catch(err){$('backup-msg').className='notice error';$('backup-msg').textContent=err.message}};
 $('draw').onclick=async()=>{if(!confirm('Confermi l’estrazione? Ogni iscritto riceverà la mail con la persona assegnata e le iscrizioni verranno chiuse.'))return;try{const d=await api('/draw',{method:'POST',headers:adminHeaders()});$('draw-msg').className='notice';$('draw-msg').textContent=d.message;refresh()}catch(e){$('draw-msg').className='notice error';$('draw-msg').textContent=e.message}};
 // localStorage può lanciare eccezioni (navigazione privata, dati bloccati): in quel caso si usano i default
 const store={get:k=>{try{return localStorage.getItem(k)}catch{return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch{}}};

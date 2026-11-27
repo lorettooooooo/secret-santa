@@ -3,7 +3,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.transaction.annotation.Transactional;
+import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.io.IOException;
+import java.nio.file.*;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
@@ -30,6 +36,9 @@ class ApiController {
   record Status(int count, int max, boolean drawn, boolean mailConfigured) {}
   record Settings(String budget, String notes, int maxParticipants) {}
   record Preferences(String interests, String ideas, String avoid) {}
+  record Backup(CampaignSettings settings, List<Participant> participants) {}
+  // le entity hanno campi package-private: il mapper del backup li legge direttamente, foto comprese (in base64)
+  private static final ObjectMapper BACKUP_JSON=new ObjectMapper().setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
 
   private void requireAdmin(String email, String key) {
     // & invece di && per confrontare sempre entrambi e non rivelare quale dei due è sbagliato
@@ -168,6 +177,40 @@ class ApiController {
     if (p.drawn) throw new ResponseStatusException(HttpStatus.CONFLICT, "Campagna attiva: dopo l'estrazione non si possono cancellare profili");
     repo.delete(p);
     return Map.of("message","Profilo di "+p.name+" cancellato");
+  }
+
+  @GetMapping("/backup")
+  ResponseEntity<byte[]> backup(@RequestHeader(value="X-Admin-Email",required=false) String email,
+                                @RequestHeader(value="X-Admin-Key",required=false) String key) throws IOException {
+    requireAdmin(email,key);
+    return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
+      .header(HttpHeaders.CONTENT_DISPOSITION,"attachment; filename=\"secretsanta-backup-"+LocalDate.now()+".json\"").body(backupJson());
+  }
+
+  private byte[] backupJson() throws IOException {
+    return BACKUP_JSON.writeValueAsBytes(new Backup(settings(), repo.findAll()));
+  }
+
+  @PostMapping("/restore") @Transactional
+  Map<String,String> restore(@RequestHeader(value="X-Admin-Email",required=false) String email,
+                             @RequestHeader(value="X-Admin-Key",required=false) String key, @RequestBody byte[] body) throws IOException {
+    requireAdmin(email,key);
+    Backup b;
+    try { b=BACKUP_JSON.readValue(body,Backup.class); }
+    catch(IOException e) { throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"File di backup non valido"); }
+    if (b.participants()==null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"File di backup non valido");
+    // copia dei dati attuali prima di sovrascriverli, così un ripristino sbagliato si può annullare
+    Path safety=Path.of("data","prima-del-ripristino-"+System.currentTimeMillis()+".json");
+    Files.createDirectories(safety.getParent());
+    Files.write(safety,backupJson());
+    // in batch: subito su DB, altrimenti Hibernate inserisce prima di cancellare e viola l'unicità di email
+    repo.deleteAllInBatch();
+    // gli id sono generati dal DB: rimappo assignedId sui nuovi id
+    Map<Long,Long> ids=new HashMap<>();
+    for(Participant p:b.participants()) { Long old=p.id; p.id=null; ids.put(old,repo.save(p).id); }
+    for(Participant p:b.participants()) if(p.assignedId!=null) p.assignedId=ids.get(p.assignedId);
+    if (b.settings()!=null) { b.settings().id=1L; settingsRepo.save(b.settings()); }
+    return Map.of("message","Backup ripristinato: "+b.participants().size()+" iscritti. I dati precedenti sono salvati sul server in "+safety);
   }
 
   @PostMapping("/draw")
